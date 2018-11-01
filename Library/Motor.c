@@ -86,3 +86,19 @@ void Set_Right_Motor_PWM(int pwm)
     right_motor_pwm_config.dutyCycle = pwm;
     MAP_Timer_A_generatePWM(TIMER_A0_BASE, &right_motor_pwm_config);
 }
+
+void Set_Left_Motor_Dir(bool dir)
+{
+    if (dir)
+        MAP_GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN7);
+    else
+        MAP_GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN7);
+}
+
+void Set_Right_Motor_Dir(bool dir)
+{
+    if (dir)
+        MAP_GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN6);
+    else
+        MAP_GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN6);
+}

@@ -23,8 +23,7 @@ int left_motor_dir = 0;
 int right_motor_pwm = 0;
 int right_motor_dir = 0;
 
-
-
+int tick=0;
 
 int main(void)
 {
@@ -75,15 +74,7 @@ int main(void)
         Set_Left_Motor_PWM(left_motor_pwm);
         Set_Right_Motor_PWM(right_motor_pwm);
 
-        // Set DIR from GC global variable
-        if (left_motor_dir)
-            MAP_GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN7);
-        else
-            MAP_GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN7);
-        if (right_motor_dir)
-            MAP_GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN6);
-        else
-            MAP_GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN6);
+
 
         Clock_Delay1ms(10);
     }
@@ -97,8 +88,9 @@ void Initialize_System()
     /* Configuring GPIO LED1 as an output */
     MAP_GPIO_setAsOutputPin(GPIO_PORT_P1, GPIO_PIN0);
 
-    /* Configuring SysTick to trigger at 1500000 (MCLK is 1.5MHz so this will
-     * make it toggle every 1s) */
+    /*
+     * Configuring SysTick to trigger at .1 sec (MCLK is 48Mhz)
+     */
     MAP_SysTick_enableModule();
     MAP_SysTick_setPeriod(4800000);
     MAP_SysTick_enableInterrupt();
@@ -153,5 +145,6 @@ void PORT1_IRQHandler(void)
 
 void SysTick_Handler(void)
 {
+    tick++;
     MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P1, GPIO_PIN0);
 }
