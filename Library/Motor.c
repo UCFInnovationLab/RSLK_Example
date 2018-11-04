@@ -14,13 +14,21 @@
 
 #include <stdint.h>
 #include "msp.h"
-#include "Library/Motor.h"
 
-/* DriverLib Includes */
 #include <ti/devices/msp432p4xx/driverlib/driverlib.h>
+
+#include "Library/Motor.h"
+#include "Library/Encoder.h"
+
+
+
+
 
 /* Timer_A PWM Configuration Parameter */
 /*
+ * Configure a timer to provide a PWM signal to each motor.
+ * Use Timer_A along with two compare registers to generate two different PWM signals
+ *
  * SMCLK = 12Mhz
  * Divide by 12 to get a 1Mhz timer clock source
  * Set divider to 1000 to get a 1000Hz pwm rate
@@ -46,7 +54,7 @@ Timer_A_PWMConfig left_motor_pwm_config =
         0
 };
 
-void Motor_Init(void){
+void motor_init(void){
     /*
     * Configuring GPIO2.6 as peripheral output for PWM of Right Motor
     * Configure GPIO1.6 as peripheral output for DIR of Right Motor
@@ -75,34 +83,139 @@ void Motor_Init(void){
     */
     MAP_Timer_A_generatePWM(TIMER_A0_BASE, &right_motor_pwm_config);
   
-    Set_Left_Motor_PWM(0);
-    Set_Right_Motor_PWM(0);
+    set_left_motor_pwm(0);
+    set_right_motor_pwm(0);
 }
 
-void Set_Left_Motor_PWM(int pwm)
+void set_left_motor_pwm(int pwm)
 {
+    if (pwm>1000) pwm=1000;
+    if (pwm<0) pwm=0;
     left_motor_pwm_config.dutyCycle = pwm;
     MAP_Timer_A_generatePWM(TIMER_A0_BASE, &left_motor_pwm_config);
 }
 
-void Set_Right_Motor_PWM(int pwm)
+void set_right_motor_pwm(int pwm)
 {
+    if (pwm>1000) pwm=1000;
+    if (pwm<0) pwm=0;
     right_motor_pwm_config.dutyCycle = pwm;
     MAP_Timer_A_generatePWM(TIMER_A0_BASE, &right_motor_pwm_config);
 }
 
-void Set_Left_Motor_Dir(bool dir)
+void set_left_motor_direction(bool dir)
 {
     if (dir)
-        MAP_GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN7);
-    else
         MAP_GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN7);
+    else
+        MAP_GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN7);
 }
 
-void Set_Right_Motor_Dir(bool dir)
+void set_right_motor_direction(bool dir)
 {
     if (dir)
-        MAP_GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN6);
-    else
         MAP_GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN6);
+    else
+        MAP_GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN6);
 }
+
+bool rotate_motors_by_counts(motor_mode_t mode, float speed_factor, int left_count, int right_count)
+{
+    static int left_target;
+    static int right_target;
+    int left_error;
+    int right_error;
+    bool r = false;
+
+    switch (mode) {
+    case INITIAL:
+        left_target = get_left_motor_count() + left_count;    // save the target degrees in a static variable for use later
+        right_target = get_right_motor_count() + right_count;
+
+        set_left_motor_direction(left_count>=0);               // set motor direction based on if degrees is positive or negative
+        set_right_motor_direction(right_count>=0);
+
+        r = false;
+    break;
+
+    case CONTINUOUS:
+
+        left_error = left_target - get_left_motor_count();
+        right_error = right_target - get_right_motor_count();
+
+        set_left_motor_direction(left_error>=0);               // set motor direction based on if speed is positive or negative
+        set_right_motor_direction(right_error>=0);
+
+        if (abs(left_error)>4)
+            set_left_motor_pwm(1000 *speed_factor);
+        else
+            set_left_motor_pwm(0);
+
+        if (abs(right_error)>4)
+            set_right_motor_pwm(1000 *speed_factor);
+        else
+            set_right_motor_pwm(0);
+
+        if ((abs(left_error) < 4) && (abs(right_error) < 4))
+            r = true;
+    break;
+    }
+
+    return r;
+
+}
+
+
+bool rotate_motors_by_counts_pid(motor_mode_t mode, float speed_factor, int left_count, int right_count)
+{
+    static int left_target;
+    static int right_target;
+    bool r = false;
+    int left_error;
+    int right_error;
+    static int left_error_sum;
+    static int right_error_sum;
+    float P = 1.0;
+    float I = 0.005;
+    int left_motor_speed;
+    int right_motor_speed;
+
+    switch (mode) {
+    case INITIAL:
+        left_target = get_left_motor_count() + left_count;    // save the target degrees in a static variable for use later
+        right_target = get_right_motor_count() + right_count;
+
+        set_left_motor_direction(left_count>=0);               // set motor direction based on if degrees is positive or negative
+        set_right_motor_direction(right_count>=0);
+
+        left_error_sum = 0;
+        right_error_sum = 0;
+        r = false;
+    break;
+
+    case CONTINUOUS:
+
+        left_error = left_target - get_left_motor_count();
+        right_error = right_target - get_right_motor_count();
+
+        left_error_sum = left_error_sum + left_error;
+        right_error_sum = right_error_sum + right_error;
+
+        left_motor_speed = P * (float)left_error + I * (float)left_error_sum;
+        right_motor_speed = P * (float)right_error + I * (float)right_error_sum;
+
+        set_left_motor_direction(left_motor_speed>=0);               // set motor direction based on if speed is positive or negative
+        set_right_motor_direction(right_motor_speed>=0);
+
+        set_left_motor_pwm(abs(left_motor_speed * speed_factor));
+        set_right_motor_pwm(abs(right_motor_speed * speed_factor));
+
+        if ((abs(left_error) < 2) && (abs(right_error) < 2))
+            r = true;
+    break;
+    }
+
+    return r;
+
+}
+

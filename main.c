@@ -1,10 +1,14 @@
-/* DriverLib Includes */
-#include <ti/devices/msp432p4xx/driverlib/driverlib.h>
-
+/*
+ * Main.c
+ *
+ * Main file containing the main state machine.
+ */
 /* Standard Includes */
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
+
+#include <ti/devices/msp432p4xx/driverlib/driverlib.h>
 
 #include "Library/Reflectance.h"
 #include "Library/Clock.h"
@@ -25,11 +29,15 @@ int tick=0;
 bool button_S1_pressed = false;
 bool button_S2_pressed = false;
 
+int mytime[20];
+int i=0;
+
 typedef enum
 {
     START = 0,
     WAIT,
     GO,
+    GO2,
     STOP
 } my_state_t;
 
@@ -37,7 +45,7 @@ my_state_t state = START;
 
 int main(void)
 {
-
+    bool done;
 
     Initialize_System();
 
@@ -45,12 +53,12 @@ int main(void)
 
     Bump_Init();
 
-    Motor_Init();
+    motor_init();
 
-    Encoder_Init();
+    encoder_init();
 
-    Set_Left_Motor_PWM(0);
-    Set_Right_Motor_PWM(0);
+    set_left_motor_pwm(0);
+    set_right_motor_pwm(0);
 
     while (1)
     {
@@ -72,26 +80,41 @@ int main(void)
         // Switch to state "STOP" if pressed
         if (button_S2_pressed) state = STOP;
 
+        //
         // Main State Machine
+        //
         switch (state) {
+
         case START:
                 state = WAIT;
-            break;
+        break;
+
         case WAIT:
-                if (button_S1_pressed) {
-                    Set_Left_Motor_PWM(200);
-                    Set_Right_Motor_PWM(200);
-                    state = GO;
-                }
-            break;
+            if (button_S1_pressed) {
+                state = GO;
+            }
+        break;
+
         case GO:
-            break;
+            rotate_motors_by_counts(INITIAL, .25, 360, 360);
+            state = GO2;
+        break;
+
+        case GO2:
+            done = rotate_motors_by_counts(CONTINUOUS, .25, 360, 360);
+
+            if (done) state = STOP;
+        break;
+
         case STOP:
-            Set_Left_Motor_PWM(0);          // Stop all motors
-            Set_Right_Motor_PWM(0);
-            break;
+            set_left_motor_pwm(0);          // Stop all motors
+            set_right_motor_pwm(0);
+        break;
         }
 
+        //while ((tick%100) != 0) {}
+//        mytime[i] = tick;
+//        if (i++>10) i=0;
         Clock_Delay1ms(10);
     }
 }
@@ -123,7 +146,7 @@ void Initialize_System()
      * Configuring SysTick to trigger at .1 sec (MCLK is 48Mhz)
      */
     MAP_SysTick_enableModule();
-    MAP_SysTick_setPeriod(4800000);
+    MAP_SysTick_setPeriod(48000);
     MAP_SysTick_enableInterrupt();
 
     /*
