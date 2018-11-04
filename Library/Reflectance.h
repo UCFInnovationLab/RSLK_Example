@@ -75,6 +75,7 @@ policies, either expressed or implied, of the FreeBSD Project.
 #ifndef REFLECTANCE_H_
 #define REFLECTANCE_H_
 
+#define LIGHT_BAR(d,p) (d>>p)&0x01;
 
 /**
  * Initialize the GPIO pins associated with the QTR-8RC.

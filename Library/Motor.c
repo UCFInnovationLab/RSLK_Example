@@ -1,10 +1,10 @@
 // Motor.c
-// Runs on MSP432
 
 // Sever VCCMD=VREG jumper on Motor Driver and Power Distribution Board and connect VCCMD to 3.3V.
-//   This makes P3.7 and P3.6 low power disables for motor drivers.  0 to sleep/stop.
+// This makes P3.7 and P3.6 low power disables for motor drivers.  0 to sleep/stop.
 // Sever nSLPL=nSLPR jumper.
-//   This separates P3.7 and P3.6 allowing for independent control
+// This separates P3.7 and P3.6 allowing for independent control
+//
 // Left motor direction connected to P1.7 (J2.14)
 // Left motor PWM connected to P2.7/TA0CCP4 (J4.40)
 // Left motor enable connected to P3.7 (J4.31)
@@ -14,6 +14,7 @@
 
 #include <stdint.h>
 #include "msp.h"
+#include "Library/Motor.h"
 
 /* DriverLib Includes */
 #include <ti/devices/msp432p4xx/driverlib/driverlib.h>
@@ -23,7 +24,8 @@
  * SMCLK = 12Mhz
  * Divide by 12 to get a 1Mhz timer clock source
  * Set divider to 1000 to get a 1000Hz pwm rate
- * Start off at 100 * 1/64 for the high time
+ * Start off at 0 * 1/64 for the high time
+ * Range will be 0-1000
  */
 Timer_A_PWMConfig right_motor_pwm_config =
 {
@@ -32,7 +34,7 @@ Timer_A_PWMConfig right_motor_pwm_config =
         1000,
         TIMER_A_CAPTURECOMPARE_REGISTER_3,
         TIMER_A_OUTPUTMODE_RESET_SET,
-        100
+        0
 };
 Timer_A_PWMConfig left_motor_pwm_config =
 {
@@ -41,7 +43,7 @@ Timer_A_PWMConfig left_motor_pwm_config =
         1000,
         TIMER_A_CAPTURECOMPARE_REGISTER_4,
         TIMER_A_OUTPUTMODE_RESET_SET,
-        100
+        0
 };
 
 void Motor_Init(void){
@@ -73,6 +75,8 @@ void Motor_Init(void){
     */
     MAP_Timer_A_generatePWM(TIMER_A0_BASE, &right_motor_pwm_config);
   
+    Set_Left_Motor_PWM(0);
+    Set_Right_Motor_PWM(0);
 }
 
 void Set_Left_Motor_PWM(int pwm)
