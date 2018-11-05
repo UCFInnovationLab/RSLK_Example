@@ -87,16 +87,23 @@ void motor_init(void){
     set_right_motor_pwm(0);
 }
 
-void set_left_motor_pwm(int pwm)
+void set_left_motor_pwm(float pwm_normal)
 {
+    int pwm;
+
+    pwm = 1000 * pwm_normal;
     if (pwm>1000) pwm=1000;
     if (pwm<0) pwm=0;
     left_motor_pwm_config.dutyCycle = pwm;
     MAP_Timer_A_generatePWM(TIMER_A0_BASE, &left_motor_pwm_config);
 }
 
-void set_right_motor_pwm(int pwm)
+void set_right_motor_pwm(float pwm_normal)
 {
+    int pwm;
+
+    pwm = 1000 * pwm_normal;
+
     if (pwm>1000) pwm=1000;
     if (pwm<0) pwm=0;
     right_motor_pwm_config.dutyCycle = pwm;
@@ -147,12 +154,12 @@ bool rotate_motors_by_counts(motor_mode_t mode, float speed_factor, int left_cou
         set_right_motor_direction(right_error>=0);
 
         if (abs(left_error)>4)
-            set_left_motor_pwm(1000 *speed_factor);
+            set_left_motor_pwm(speed_factor);
         else
             set_left_motor_pwm(0);
 
         if (abs(right_error)>4)
-            set_right_motor_pwm(1000 *speed_factor);
+            set_right_motor_pwm(speed_factor);
         else
             set_right_motor_pwm(0);
 

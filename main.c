@@ -23,6 +23,7 @@ uint8_t light_data0;
 int32_t Position; // 332 is right, and -332 is left of center
 uint8_t bump_data;
 uint8_t bump_data0;
+uint8_t bump_data2;
 
 int tick=0;
 
@@ -38,6 +39,9 @@ typedef enum
     WAIT,
     GO,
     GO2,
+    BUMMPED1a,
+    BUMMPED1b,
+    DRIVE,
     STOP
 } my_state_t;
 
@@ -72,17 +76,18 @@ int main(void)
 
         // Read Bump data into a byte
         // Lower six bits correspond to the six bump sensors
-        bump_data = Bump_Read();
         // put into individual variables so we can view it in GC
-        bump_data0 = BUMP_SWITCH(bump_data,1);
+        bump_data = Bump_Read();
+        bump_data0 = BUMP_SWITCH(bump_data,0);
+        bump_data2 = BUMP_SWITCH(bump_data,2);
 
         // Emergency stop switch S2
         // Switch to state "STOP" if pressed
         if (button_S2_pressed) state = STOP;
 
-        //
-        // Main State Machine
-        //
+        //-----------------------------------
+        //        Main State Machine
+        //-----------------------------------
         switch (state) {
 
         case START:
@@ -96,17 +101,45 @@ int main(void)
         break;
 
         case GO:
-            rotate_motors_by_counts(INITIAL, .25, 360, 360);
+            rotate_motors_by_counts(INITIAL, .25, 720, 0);
             state = GO2;
         break;
 
         case GO2:
-            done = rotate_motors_by_counts(CONTINUOUS, .25, 360, 360);
+            if (bump_data0) state = BUMMPED1a;
+
+            done = rotate_motors_by_counts(CONTINUOUS, .25, 720, 0);
 
             if (done) state = STOP;
         break;
 
+        case BUMMPED1a:
+            set_left_motor_pwm(0);          // Stop all motors
+            set_right_motor_pwm(0);
+
+            rotate_motors_by_counts(INITIAL, .25, -100, 0);
+            state = BUMMPED1b;
+        break;
+
+        case BUMMPED1b:
+           set_left_motor_pwm(0);          // Stop all motors
+           set_right_motor_pwm(0);
+
+           done = rotate_motors_by_counts(CONTINUOUS, .25, -100, 0);
+
+           if (done) state = DRIVE;
+        break;
+
+        case DRIVE:
+            set_left_motor_pwm(.25);          // Stop all motors
+            set_right_motor_pwm(.25);
+
+            if (bump_data2) state =STOP;
+        break;
+
         case STOP:
+            set_left_motor_direction(true);
+            set_right_motor_direction(true);
             set_left_motor_pwm(0);          // Stop all motors
             set_right_motor_pwm(0);
         break;
