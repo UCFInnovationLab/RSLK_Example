@@ -101,14 +101,14 @@ int main(void)
         break;
 
         case GO:
-            rotate_motors_by_counts(INITIAL, .25, 720, 0);
+            rotate_motors_by_counts(INITIAL, .25, 720, 0);  // Setup rotation: speed: 2.5, Left counts: 720, Right counts: 0
             state = GO2;
         break;
 
         case GO2:
             if (bump_data0) state = BUMMPED1a;
 
-            done = rotate_motors_by_counts(CONTINUOUS, .25, 720, 0);
+            done = rotate_motors_by_counts(CONTINUOUS, .25, 720, 0);  // Continue to rotate until done
 
             if (done) state = STOP;
         break;
@@ -122,15 +122,14 @@ int main(void)
         break;
 
         case BUMMPED1b:
-           set_left_motor_pwm(0);          // Stop all motors
-           set_right_motor_pwm(0);
-
            done = rotate_motors_by_counts(CONTINUOUS, .25, -100, 0);
 
            if (done) state = DRIVE;
         break;
 
         case DRIVE:
+            set_left_motor_direction(true);
+            set_right_motor_direction(true);
             set_left_motor_pwm(.25);          // Stop all motors
             set_right_motor_pwm(.25);
 
@@ -138,8 +137,7 @@ int main(void)
         break;
 
         case STOP:
-            set_left_motor_direction(true);
-            set_right_motor_direction(true);
+
             set_left_motor_pwm(0);          // Stop all motors
             set_right_motor_pwm(0);
         break;
