@@ -21,9 +21,6 @@
 #include "Library/Encoder.h"
 
 
-
-
-
 /* Timer_A PWM Configuration Parameter */
 /*
  * Configure a timer to provide a PWM signal to each motor.
@@ -87,6 +84,11 @@ void motor_init(void){
     set_right_motor_pwm(0);
 }
 
+/*
+ *  Set left motor power (pwm - pulse width modulation)
+ *
+ *  Power is given in a range of 0.0 - 1.0
+ */
 void set_left_motor_pwm(float pwm_normal)
 {
     int pwm;
@@ -98,6 +100,11 @@ void set_left_motor_pwm(float pwm_normal)
     MAP_Timer_A_generatePWM(TIMER_A0_BASE, &left_motor_pwm_config);
 }
 
+/*
+ *  Set right motor power (pwm - pulse width modulation)
+ *
+ *  Power is given in a range of 0.0 - 1.0
+ */
 void set_right_motor_pwm(float pwm_normal)
 {
     int pwm;
@@ -110,6 +117,12 @@ void set_right_motor_pwm(float pwm_normal)
     MAP_Timer_A_generatePWM(TIMER_A0_BASE, &right_motor_pwm_config);
 }
 
+/*
+ *  Set left motor direction.
+ *
+ *  True: forward
+ *  False: reverse
+ */
 void set_left_motor_direction(bool dir)
 {
     if (dir)
@@ -118,6 +131,12 @@ void set_left_motor_direction(bool dir)
         MAP_GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN7);
 }
 
+/*
+ *  Set right motor direction.
+ *
+ *  True: forward
+ *  False: reverse
+ */
 void set_right_motor_direction(bool dir)
 {
     if (dir)
@@ -126,6 +145,13 @@ void set_right_motor_direction(bool dir)
         MAP_GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN6);
 }
 
+/*
+ *  Rotate both left and right motors by a given encoder count.
+ *
+ *  This routine is called in two parts, first call is with mode=INITIAL to set up some initial static variables,
+ *  second call is with mode=CONTINUOUS.  This call will turn on the motors in the proper direction and check if the target count threshold
+ *  has been reached.  It should be called continuously until a value of TRUE is returned.
+ */
 bool rotate_motors_by_counts(motor_mode_t mode, float speed_factor, int left_count, int right_count)
 {
     static int left_target;
@@ -136,10 +162,12 @@ bool rotate_motors_by_counts(motor_mode_t mode, float speed_factor, int left_cou
 
     switch (mode) {
     case INITIAL:
-        left_target = get_left_motor_count() + left_count;    // save the target degrees in a static variable for use later
+        // save the target degrees in a static variable for use later
+        left_target = get_left_motor_count() + left_count;
         right_target = get_right_motor_count() + right_count;
 
-        set_left_motor_direction(left_count>=0);               // set motor direction based on if degrees is positive or negative
+        // set motor direction based on if degrees is positive or negative
+        set_left_motor_direction(left_count>=0);
         set_right_motor_direction(right_count>=0);
 
         r = false;
@@ -150,9 +178,11 @@ bool rotate_motors_by_counts(motor_mode_t mode, float speed_factor, int left_cou
         left_error = left_target - get_left_motor_count();
         right_error = right_target - get_right_motor_count();
 
-        set_left_motor_direction(left_error>=0);               // set motor direction based on if speed is positive or negative
+        // set motor direction based on if speed is positive or negative
+        set_left_motor_direction(left_error>=0);
         set_right_motor_direction(right_error>=0);
 
+        // Stop individual motor if we are within the threshold
         if (abs(left_error)>4)
             set_left_motor_pwm(speed_factor);
         else
@@ -163,6 +193,7 @@ bool rotate_motors_by_counts(motor_mode_t mode, float speed_factor, int left_cou
         else
             set_right_motor_pwm(0);
 
+        // if both motors are within the threshold then return true to signal "all done"
         if ((abs(left_error) < 4) && (abs(right_error) < 4))
             r = true;
     break;
@@ -172,7 +203,13 @@ bool rotate_motors_by_counts(motor_mode_t mode, float speed_factor, int left_cou
 
 }
 
-
+/*
+ *  Rotate both left and right motors by a given encoder count using a PID algorithm.
+ *
+ *  This routine is called in two parts, first call is with mode=INITIAL to set up some initial static variables,
+ *  second call is with mode=CONTINUOUS.  This call will process the PID loop and return after one iteration.  It
+ *  should be called until the return value is TRUE, signifying that the motors have reached the threshold around the target count.
+ */
 bool rotate_motors_by_counts_pid(motor_mode_t mode, float speed_factor, int left_count, int right_count)
 {
     static int left_target;
@@ -182,10 +219,10 @@ bool rotate_motors_by_counts_pid(motor_mode_t mode, float speed_factor, int left
     int right_error;
     static int left_error_sum;
     static int right_error_sum;
-    float P = 1.0;
-    float I = 0.005;
-    int left_motor_speed;
-    int right_motor_speed;
+    float P = 0.3;
+    float I = 0.001;
+    float left_motor_speed;
+    float right_motor_speed;
 
     switch (mode) {
     case INITIAL:
@@ -205,18 +242,35 @@ bool rotate_motors_by_counts_pid(motor_mode_t mode, float speed_factor, int left
         left_error = left_target - get_left_motor_count();
         right_error = right_target - get_right_motor_count();
 
+        // Calculate integral of error
         left_error_sum = left_error_sum + left_error;
         right_error_sum = right_error_sum + right_error;
 
+        // Clamp integral, stop windup
+        if (left_error_sum > 1.0/I) left_error_sum = 1.0/I;
+        if (left_error_sum < -1.0/I) left_error_sum = -1.0/I;
+        if (right_error_sum > 1.0/I) right_error_sum = 1.0/I;
+        if (right_error_sum < -1.0/I) right_error_sum = -1.0/I;
+
+        // Calculate motor speed using PI
         left_motor_speed = P * (float)left_error + I * (float)left_error_sum;
         right_motor_speed = P * (float)right_error + I * (float)right_error_sum;
 
+        // Clamp motor speed between -1.0 - 1.0
+        if (left_motor_speed < -1.0) left_motor_speed = -1.0;
+        else if (left_motor_speed > 1.0) left_motor_speed = 1.0;
+        if (right_motor_speed < -1.0) right_motor_speed = -1.0;
+        else if (right_motor_speed > 1.0) right_motor_speed = 1.0;
+
+        // Set motor direction based on sign of motor speed
         set_left_motor_direction(left_motor_speed>=0);               // set motor direction based on if speed is positive or negative
         set_right_motor_direction(right_motor_speed>=0);
 
-        set_left_motor_pwm(abs(left_motor_speed * speed_factor));
-        set_right_motor_pwm(abs(right_motor_speed * speed_factor));
+        // Set motors to run at calculated speed times a speed factor
+        set_left_motor_pwm(fabs(left_motor_speed * speed_factor));
+        set_right_motor_pwm(fabs(right_motor_speed * speed_factor));
 
+        // Stop if within a treshold
         if ((abs(left_error) < 2) && (abs(right_error) < 2))
             r = true;
     break;

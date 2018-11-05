@@ -101,14 +101,14 @@ int main(void)
         break;
 
         case GO:
-            rotate_motors_by_counts(INITIAL, .25, 720, 0);  // Setup rotation: speed: 2.5, Left counts: 720, Right counts: 0
+            rotate_motors_by_counts_pid(INITIAL, .25, 360, 0);  // Setup rotation: speed: 2.5, Left counts: 360, Right counts: 0
             state = GO2;
         break;
 
         case GO2:
             if (bump_data0) state = BUMMPED1a;
 
-            done = rotate_motors_by_counts(CONTINUOUS, .25, 720, 0);  // Continue to rotate until done
+            done = rotate_motors_by_counts_pid(CONTINUOUS, .25, 360, 0);  // Continue to rotate until done
 
             if (done) state = STOP;
         break;
@@ -143,10 +143,9 @@ int main(void)
         break;
         }
 
-        //while ((tick%100) != 0) {}
-//        mytime[i] = tick;
-//        if (i++>10) i=0;
         Clock_Delay1ms(10);
+
+
     }
 }
 
@@ -231,7 +230,7 @@ void PORT1_IRQHandler(void)
 void SysTick_Handler(void)
 {
     tick++;
-    MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P1, GPIO_PIN0);
+    if ((tick%1000)==0) MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P1, GPIO_PIN0);        // Toggle RED LED each time through loop
 }
 
 
