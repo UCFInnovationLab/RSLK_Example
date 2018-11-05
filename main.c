@@ -15,6 +15,7 @@
 #include "Library/Bump.h"
 #include "Library/Motor.h"
 #include "Library/Encoder.h"
+#include "Library/Button.h"
 
 void Initialize_System();
 
@@ -26,9 +27,6 @@ uint8_t bump_data0;
 uint8_t bump_data2;
 
 int tick=0;
-
-bool button_S1_pressed = false;
-bool button_S2_pressed = false;
 
 int mytime[20];
 int i=0;
@@ -61,6 +59,8 @@ int main(void)
 
     encoder_init();
 
+    button_init();
+
     set_left_motor_pwm(0);
     set_right_motor_pwm(0);
 
@@ -83,7 +83,7 @@ int main(void)
 
         // Emergency stop switch S2
         // Switch to state "STOP" if pressed
-        if (button_S2_pressed) state = STOP;
+        if (button_S2_pressed()) state = STOP;
 
         //-----------------------------------
         //        Main State Machine
@@ -95,7 +95,7 @@ int main(void)
         break;
 
         case WAIT:
-            if (button_S1_pressed) {
+            if (button_S1_pressed()) {
                 state = GO;
             }
         break;
@@ -144,8 +144,6 @@ int main(void)
         }
 
         Clock_Delay1ms(10);
-
-
     }
 }
 
@@ -171,55 +169,16 @@ void Initialize_System()
 
     MAP_GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0);
 
-
     /*
-     * Configuring SysTick to trigger at .1 sec (MCLK is 48Mhz)
+     * Configuring SysTick to trigger at .001 sec (MCLK is 48Mhz)
      */
     MAP_SysTick_enableModule();
     MAP_SysTick_setPeriod(48000);
     MAP_SysTick_enableInterrupt();
 
-    /*
-     * Configure P1.1 for button interrupt
-     */
-    MAP_GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P1, GPIO_PIN1);
-    MAP_GPIO_interruptEdgeSelect(GPIO_PORT_P1, GPIO_PIN1, GPIO_LOW_TO_HIGH_TRANSITION);
-    MAP_GPIO_clearInterruptFlag(GPIO_PORT_P1, GPIO_PIN1);
-    MAP_GPIO_enableInterrupt(GPIO_PORT_P1, GPIO_PIN1);
-
-    /*
-     * Configure P1.4 for button interrupt
-     */
-    MAP_GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P1, GPIO_PIN4);
-    MAP_GPIO_interruptEdgeSelect(GPIO_PORT_P1, GPIO_PIN4, GPIO_LOW_TO_HIGH_TRANSITION);
-    MAP_GPIO_clearInterruptFlag(GPIO_PORT_P1, GPIO_PIN4);
-    MAP_GPIO_enableInterrupt(GPIO_PORT_P1, GPIO_PIN4);
-
-    /* Enable interrupts */
-    MAP_Interrupt_enableInterrupt(INT_PORT1);
     MAP_Interrupt_enableMaster();
-
 }
-/* Port1 ISR - This Interrupt Handler will service the Port1 interrupts.
- * Port1 pin 1 & 4 are connected to the two side buttons.
- */
-void PORT1_IRQHandler(void)
-{
-    uint32_t status = MAP_GPIO_getEnabledInterruptStatus(GPIO_PORT_P1);
-    MAP_GPIO_clearInterruptFlag(GPIO_PORT_P1, status);
 
-    // Button S1
-    if (status & GPIO_PIN1)
-    {
-        button_S1_pressed = true;
-    }
-
-    // Button S2
-    if (status & GPIO_PIN4)
-    {
-        button_S2_pressed = true;
-    }
-}
 
 /*
  * Handle the SysTick Interrupt.  Currently interrupting at 1/10 second.
