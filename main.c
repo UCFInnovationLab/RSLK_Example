@@ -101,14 +101,14 @@ int main(void)
         break;
 
         case GO:
-            rotate_motors_by_counts_pid(INITIAL, .25, 360, 0);  // Setup rotation: speed: 2.5, Left counts: 360, Right counts: 0
+            rotate_motors_by_counts(INITIAL, .25, 360, 0);  // Setup rotation: speed: 2.5, Left counts: 360, Right counts: 0
             state = GO2;
         break;
 
         case GO2:
             if (bump_data0) state = BUMMPED1a;
 
-            done = rotate_motors_by_counts_pid(CONTINUOUS, .25, 360, 0);  // Continue to rotate until done
+            done = rotate_motors_by_counts(CONTINUOUS, .25, 360, 0);  // Continue to rotate until done
 
             if (done) state = STOP;
         break;
