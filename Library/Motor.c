@@ -181,18 +181,18 @@ bool rotate_motors_by_counts(motor_mode_t mode, float speed_factor, int left_cou
         set_right_motor_direction(right_error>=0);
 
         // Stop individual motor if we are within the threshold
-        if (abs(left_error)>4)
+        if (abs(left_error)>8)
             set_left_motor_pwm(speed_factor);
         else
             set_left_motor_pwm(0);
 
-        if (abs(right_error)>4)
+        if (abs(right_error)>8)
             set_right_motor_pwm(speed_factor);
         else
             set_right_motor_pwm(0);
 
         // if both motors are within the threshold then return true to signal "all done"
-        if ((abs(left_error) < 4) && (abs(right_error) < 4))
+        if ((abs(left_error) <= 8) && (abs(right_error) <= 8))
             r = true;
     break;
     }
