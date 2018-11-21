@@ -52,9 +52,8 @@ policies, either expressed or implied, of the FreeBSD Project.
 
 #include <stdint.h>
 #include "msp.h"
-
-/* DriverLib Includes */
 #include <ti/devices/msp432p4xx/driverlib/driverlib.h>
+#include "Bump.h"
 
 // Initialize Bump sensors
 // Make six Port 4 pins inputs

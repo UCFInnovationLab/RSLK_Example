@@ -43,6 +43,7 @@ policies, either expressed or implied, of the FreeBSD Project.
 
 #include <stdint.h>
 #include "msp.h"
+#include "Clock.h"
 
 uint32_t ClockFrequency = 3000000; // cycles/second
 //static uint32_t SubsystemFrequency = 3000000; // cycles/second

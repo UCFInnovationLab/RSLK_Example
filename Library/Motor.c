@@ -14,11 +14,9 @@
 
 #include <stdint.h>
 #include "msp.h"
-
 #include <ti/devices/msp432p4xx/driverlib/driverlib.h>
-
-#include "Library/Motor.h"
-#include "Library/Encoder.h"
+#include "Motor.h"
+#include "Encoder.h"
 
 
 /* Timer_A PWM Configuration Parameter */

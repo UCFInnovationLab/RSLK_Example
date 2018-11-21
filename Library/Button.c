@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include "msp.h"
 #include <ti/devices/msp432p4xx/driverlib/driverlib.h>
-#include "button.h"
+#include "Button.h"
 
 // Global button flags
 bool button_S1_pressed_flag = false;

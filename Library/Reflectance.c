@@ -48,8 +48,8 @@ policies, either expressed or implied, of the FreeBSD Project.
 
 #include <stdint.h>
 #include "msp432.h"
-#include "Library/Clock.h"
-#include "Library/Reflectance.h"
+#include "Clock.h"
+#include "Reflectance.h"
 
 
 

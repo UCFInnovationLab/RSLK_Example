@@ -20,10 +20,8 @@
 
 #include <stdint.h>
 #include "msp.h"
-#include "Encoder.h"
-
-/* DriverLib Includes */
 #include <ti/devices/msp432p4xx/driverlib/driverlib.h>
+#include "Encoder.h"
 
 // Initialize Encoder inputs
 
